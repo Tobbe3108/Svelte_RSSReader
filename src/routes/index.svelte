@@ -1,52 +1,89 @@
-<style>
-  h1,
-  figure,
-  p {
-    text-align: center;
-    margin: 0 auto;
-  }
+<svelte:head>
+  <title>Sapper RSS Reader</title>
+</svelte:head>
 
-  h1 {
-    font-size: 2.8em;
-    text-transform: uppercase;
-    font-weight: 700;
-    margin: 0 0 0.5em 0;
-  }
+<script>
+  import { onMount } from 'svelte'
 
-  figure {
-    margin: 0 0 1em 0;
-  }
+  let showAddFeed = false;
+  let rssUrl = 'https://news.ycombinator.com/rss';
+  let rssList = [];
 
-  img {
-    width: 100%;
-    max-width: 400px;
-    margin: 0 0 1em 0;
-  }
+  onMount(async () => {
+    const newRssList = await fetch('api/list').then(r => r.json())
+    rssList = newRssList
+  })
 
-  p {
-    margin: 1em auto;
-  }
-
-  @media (min-width: 480px) {
-    h1 {
-      font-size: 4em;
+  const addRssToList = async () => {
+    showAddFeed = false
+    const {added, rssList: newRssList} = await fetch("/api/add", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ url: rssUrl })
+    }).then(r => r.json())
+    if (added) {
+      rssList = newRssList
     }
+  }
+
+  const removeFromList = async (url) => {
+    const {removed, rssList: newRssList} = await fetch("/api/del", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ url })
+    }).then(r => r.json())
+    if (removed) {
+      rssList = newRssList
+    }
+  }
+</script>
+
+<style>
+  .container {
+    display: flex;
+  }
+
+  .feedList {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .articles {
+    display: flex;
+    flex: 1;
+  }
+
+  .addFeed {
+    display: flex;
+    flex-direction: row;
+  }
+
+  .feedInput {
+    flex: 1;
   }
 </style>
 
-<svelte:head>
-  <title>Sapper project template</title>
-</svelte:head>
+{#if showAddFeed}
+<div class="addFeed">
+  <button on:click={() => showAddFeed = false}>Cancel</button>
+  <input bind:value={rssUrl} class="feedInput" type="text" value="http://rss.feed" />
+  <button on:click={addRssToList}>Add</button>
+</div>
+{/if}
 
-<h1>Great success!</h1>
-
-<figure>
-  <img alt="Borat" src="great-success.png" />
-  <figcaption>HIGH FIVE!</figcaption>
-</figure>
-
-<p>
-  <strong>
-    Try editing this file (src/routes/index.svelte) to test live reloading!
-  </strong>
-</p>
+<div class="container">
+  <div class="feedList">
+    <button on:click={() => showAddFeed = true}>Add</button>
+    <ul>
+    {#each rssList as feed} 
+      <li>{feed} <button on:click={() => removeFromList(feed)}>Remove</button></li>
+    {/each}
+    </ul>
+  </div>
+  <button>Reload</button>
+  <div class="articles">Content</div>
+</div>
