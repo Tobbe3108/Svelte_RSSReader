@@ -1,6 +1,11 @@
 import express from 'express';
+import Parser from 'rss-parser';
 
+//Subscribed RSS Feeds
 const rssList = new Set();
+
+// RSS Parser
+let parser = new Parser();
 
 export default server => {
   const router = express.Router();
@@ -28,8 +33,17 @@ export default server => {
   });
 
   //* Refresh
-  router.get('/refresh', (req, res) => {
-    res.send({ ok: true });
+  router.get('/refresh', async (req, res) => {
+    try {
+      const result = [];
+      for (const url of rssList) {
+        const feed = await parser.parseURL(url);
+        result.push(feed);
+      }
+      res.send(result);
+    } catch (e) {
+      console.log('Exception', e);
+    }
   });
 
   //* List

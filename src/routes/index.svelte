@@ -4,15 +4,27 @@
 
 <script>
   import { onMount } from 'svelte'
+  import Article from '../components/Article.svelte'
 
   let showAddFeed = false;
   let rssUrl = 'https://news.ycombinator.com/rss';
   let rssList = [];
+  let feedsContent = [];
 
   onMount(async () => {
     const newRssList = await fetch('api/list').then(r => r.json())
     rssList = newRssList
   })
+
+  const refreshFeeds = async () => {
+    const feeds = await fetch('api/refresh').then(r => r.json())
+    feedsContent = feeds.map(feed => {
+      const {items, ...feedMeta} = feed;
+      return items.map(item => ({...item, feed: feedMeta}))
+    })
+    .reduce((acc, val) => acc.concat(val), [])
+    .sort((a, b) => new Date(b.isoDate) - new Date(a.isoDate))
+  }
 
   const addRssToList = async () => {
     showAddFeed = false
@@ -25,6 +37,7 @@
     }).then(r => r.json())
     if (added) {
       rssList = newRssList
+      refreshFeeds()
     }
   }
 
@@ -38,8 +51,11 @@
     }).then(r => r.json())
     if (removed) {
       rssList = newRssList
+      refreshFeeds()
     }
   }
+
+  
 </script>
 
 <style>
@@ -50,11 +66,7 @@
   .feedList {
     display: flex;
     flex-direction: column;
-  }
-
-  .articles {
-    display: flex;
-    flex: 1;
+    padding: 10px;
   }
 
   .addFeed {
@@ -65,6 +77,24 @@
   .feedInput {
     flex: 1;
   }
+
+  .articlesCollection {
+    display: flex;
+    flex: 1;
+    padding: 10px;
+    flex-direction: column;
+  }
+
+  .articleActions {
+    display: flex;
+  }
+
+  .article {
+    display: flex;
+    flex-direction: column;
+  }
+
+  
 </style>
 
 {#if showAddFeed}
@@ -84,6 +114,15 @@
     {/each}
     </ul>
   </div>
-  <button>Reload</button>
-  <div class="articles">Content</div>
+
+  <div class="articlesCollection">
+    <div class="articleActions">
+      <button on:click={refreshFeeds}>Reload</button>
+    </div>
+    <div class="article">
+      {#each feedsContent as item}
+        <Article {item}/>
+      {/each}
+    </div>
+  </div>
 </div>
